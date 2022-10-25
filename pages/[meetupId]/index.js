@@ -1,46 +1,43 @@
+import { MongoClient, ObjectId } from "mongodb";
 import MeetupDetail from "../../components/meetups/MeetupDetail";
 
-function MeetupDetails() {
+function MeetupDetails(props) {
     return (
         <MeetupDetail
-            image="https://lh3.googleusercontent.com/IZ6z2jWs8gdIarVyMX440QBHMU9woEgpwG94v-d5eRxsJFHyqBTeJxt04Fs86WYqOGQ3ZOyrTu4-VzoarHeF2mYA=w640-h400-e365-rj-sc0x00ffffff"
-            title='First Meetup'
-            address="Some st"
-            description="fgfdgfdgdfgdfgdf"
+            image={props.meetupData.image}
+            title={props.meetupData.title}
+            address={props.meetupData.address}
+            description={props.meetupData.description}
         />
     )
 }
 
 export async function getStaticPaths() {
+    const client = await MongoClient.connect("mongodb://localhost:27017/meetups");
+    const db = client.db();
+    const meetupCollection = db.collection('meetups');
+    const meetups = await meetupCollection.find({}, {_id: 1}).toArray();
+    client.close();
     return {
         fallback: false,
-        paths: [
-            {
-                params: {
-                    meetupId: 'm1',
-                }
-            },
-            {
-                params: {
-                    meetupId: 'm2',
-                }
-            },
-        ]
+        paths: meetups.map(meetup => ({ params: { meetupId: meetup._id.toString()}}))
     }
 }
 
 export async function getStaticProps(context) {
     const meetupId = context.params.meetupId;
-    console.log(meetupId)
-
+    const client = await MongoClient.connect("mongodb://localhost:27017/meetups");
+    const db = client.db();
+    const meetupCollection = db.collection('meetups');
+    const selectedMeetup = await meetupCollection.findOne({_id: ObjectId(meetupId)});
+    client.close();
     return {
         props: {
             meetupData: {
-                id: 'm1',
-                title: 'First meetup',
-                image: 'https://lh3.googleusercontent.com/IZ6z2jWs8gdIarVyMX440QBHMU9woEgpwG94v-d5eRxsJFHyqBTeJxt04Fs86WYqOGQ3ZOyrTu4-VzoarHeF2mYA=w640-h400-e365-rj-sc0x00ffffff',
-                address: 'Some st',
-                description: 'fgfdgfdgdfgdfgdf'
+                id: selectedMeetup._id.toString(),
+                title: selectedMeetup.title,
+                address: selectedMeetup.address,
+                image: selectedMeetup.image
             }
         }
     }
